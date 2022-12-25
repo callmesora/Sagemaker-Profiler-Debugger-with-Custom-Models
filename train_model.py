@@ -15,9 +15,15 @@ from torchvision import datasets, models, transforms
 from torchvision import datasets, models, transforms
 
 
-from smdebug import modes
-from smdebug.profiler.utils import str2bool
-from smdebug.pytorch import get_hook
+try:
+    import smdebug
+    from smdebug import modes
+    from smdebug.profiler.utils import str2bool
+    from smdebug.pytorch import get_hook
+except:
+    pass
+
+
 
 import argparse
 import os

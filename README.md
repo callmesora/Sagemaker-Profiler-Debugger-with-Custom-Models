@@ -15,13 +15,36 @@ The project is designed to be dataset independent so if there is a dataset that 
 Upload the data to an S3 bucket through the AWS Gateway so that SageMaker has access to the data. 
 
 ## Hyperparameter Tuning
-What kind of model did you choose for this experiment and why? Give an overview of the types of parameters and their ranges used for the hyperparameter search
 
-Remember that your README should:
-- Include a screenshot of completed training jobs
-- Logs metrics during the training process
-- Tune at least two hyperparameters
-- Retrieve the best best hyperparameters from all your training jobs
+The training Jobs on AWS:
+
+![trainingJobsAWS](https://user-images.githubusercontent.com/61661948/210153341-56965935-eec9-42a8-a35b-49a8791d0d72.png)
+
+The two hyperparameters tuned were the learning_rate and the batch_size. As the purpose of this is to replicate this training job over and over with new input of new data understanding the right batch size and learning_rate is curcial because it allows us a proper full use of the GPU that gets charged by the second.
+```
+hyperparameter_ranges = {
+    "learning_rate": ContinuousParameter(0.001, 0.1),
+    "batch_size": CategoricalParameter([32, 64, 128, 256, 512]),
+}
+```
+
+![hpologs](https://user-images.githubusercontent.com/61661948/210153320-74681071-458b-47a6-8e3f-2278bd168c5a.png)
+The final hyper-parameters of the best model were:
+
+```
+{'_tuning_objective_metric': '"average test loss"',
+ 'batch_size': '"128"',
+ 'learning_rate': '0.03087708635920261',
+ 'sagemaker_container_log_level': '20',
+ 'sagemaker_estimator_class_name': '"PyTorch"',
+ 'sagemaker_estimator_module': '"sagemaker.pytorch.estimator"',
+ 'sagemaker_job_name': '"pytorch-training-2022-12-24-17-08-50-491"',
+ 'sagemaker_program': '"hpo.py"',
+ 'sagemaker_region': '"us-east-1"',
+ 'sagemaker_submit_directory': '"s3://sagemaker-us-east-1-447805070819/pytorch-training-2022-12-24-17-08-50-491/source/sourcedir.tar.gz"'}
+```
+
+
 
 ## Debugging and Profiling
 **TODO**: Give an overview of how you performed model debugging and profiling in Sagemaker

@@ -232,7 +232,7 @@ def main(args):
     TODO: Save the trained model
     '''
     path = os.path.join(model_dir, "model.pth")
-    torch.save(model, path)
+    torch.save(model.cpu().state_dict(), path)
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser()

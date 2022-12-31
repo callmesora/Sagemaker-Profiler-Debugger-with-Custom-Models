@@ -47,18 +47,81 @@ The final hyper-parameters of the best model were:
 
 
 ## Debugging and Profiling
-**TODO**: Give an overview of how you performed model debugging and profiling in Sagemaker
+In order to debug and Profile the model I implemented some hooks with the following rules to better understand if the model was overfitting and allow for the best GPU usage
+
+```
+rules = [
+    Rule.sagemaker(rule_configs.loss_not_decreasing()),
+    ProfilerRule.sagemaker(rule_configs.LowGPUUtilization()),
+    ProfilerRule.sagemaker(rule_configs.ProfilerReport()),
+    Rule.sagemaker(rule_configs.overfit()),
+    Rule.sagemaker(rule_configs.overtraining()),
+]
+
+profiler_config = ProfilerConfig(
+    system_monitor_interval_millis=500, framework_profile_params=FrameworkProfile(num_steps=10)
+)
+debugger_config = DebuggerHookConfig(
+    hook_parameters={"train.save_interval": "100", "eval.save_interval": "10"}
+)
+```
+
+Then the hooks were implemented on the training script. For example this hook is inside the train method.
+```
+hook = get_hook(create_if_not_exists=True)
+    if hook:
+        hook.set_mode(modes.TRAIN)
+        
+    loss_fn = criterion
+    
+    if hook:
+        hook.register_loss(criterion)
+```
 
 ### Results
-**TODO**: What are the results/insights did you get by profiling/debugging your model?
-
-**TODO** Remember to provide the profiler html/pdf file in your submission.
+The profiling help me understand that perhaps the number of data loaders and workers could be optimized to a greater number achieving a better usage of the GPU. Furthermore we could also pre-fetch the images for quicker loading time.
 
 
 ## Model Deployment
-**TODO**: Give an overview of the deployed model and instructions on how to query the endpoint with a sample input.
+The endpoint was deployed with a Image Serializer or JPEG format and with a JSON deserializer 
 
-**TODO** Remember to provide a screenshot of the deployed active endpoint in Sagemaker.
+```
+role = sagemaker.get_execution_role()
+jpeg_serializer = sagemaker.serializers.IdentitySerializer("image/jpeg")
+json_deserializer = sagemaker.deserializers.JSONDeserializer()
 
-## Standout Suggestions
-**TODO (Optional):** This is where you can provide information about any standout suggestions that you have attempted.
+class ImgPredictor(Predictor):
+    def __init__( self, endpoint_name, sagemaker_session):
+        super( ImgPredictor, self).__init__(
+            endpoint_name,
+            sagemaker_session = sagemaker_session,
+            serializer = jpeg_serializer,
+            deserializer = json_deserializer
+        )
+        
+pytorch_model = PyTorchModel( model_data = model_data_artifacts,
+                            role = role,
+                             entry_point= inference_path,
+                             py_version = "py36",
+                             framework_version = "1.6",
+                            predictor_cls = ImgPredictor
+                            )
+
+predictor = pytorch_model.deploy( endpoint_name=endpoint_name,initial_instance_count = 1, 
+                                 instance_type = instance_type)
+
+```
+
+And to run inference on this deployment endpoint we do:
+```
+filename = "./Australian_cattle_dog_00728.jpg"
+
+with open(filename , "rb") as f:
+    payload = f.read()
+    response = predictor.predict(payload, initial_args={"ContentType": "image/jpeg"})
+
+
+```
+![endpoint](https://user-images.githubusercontent.com/61661948/210153577-f585449d-f036-49df-87a5-f26c704eaec1.png)
+
+
